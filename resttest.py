@@ -1,6 +1,5 @@
 import argparse
 import collections
-import math
 import re
 import requests
 import sys
@@ -26,14 +25,13 @@ args = parser.parse_args()
 # RESTful API info
 url = 'http://resttest.bench.co/'
 GET_transpage_stub = url + 'transactions/{0}.json'
-MAX_NUM_TRANS = 10.0 # max number of transactions on a page
 
 ################################################################################
 # Helper Functions
 ################################################################################
 def sumTransAmounts(transactions):
     '''
-    Returns the total amount from list of transactions
+    Returns the total amount from list of transactions.
 
     Params:
         transactions - list of transactions 
@@ -45,7 +43,7 @@ def sumTransAmounts(transactions):
 
 def expenseCategories(transactions):
     '''
-    Calculates total expenses in categories
+    Calculates total expenses in categories.
 
     Params:
         transactions - list of transactions
@@ -70,7 +68,7 @@ def expenseCategories(transactions):
 
 def dailyBalances(transactions):
     '''
-    Calculates accumulative daily balances 
+    Calculates accumulative daily balances.
 
     Params:
         transactions - list of transactions 
@@ -79,7 +77,7 @@ def dailyBalances(transactions):
         An ordered dictionary (by ascending date) with dates as keys and
         accumulated amount totals as values
     '''
-    sorted_trans = sorted(transactions, key=lambda trans: trans['Date'])
+    sorted_trans = sorted(transactions, key=lambda t: t['Date'])
     dates = collections.OrderedDict()
     running_total = 0.0
 
@@ -92,7 +90,7 @@ def dailyBalances(transactions):
 
 def removeGarbage(transactions):
     '''
-    (Attempts to) Remove garbage text from transaction vendor names
+    (Attempts to) Remove garbage text from transaction vendor names.
 
     Params:
         transactions - list of transactions 
@@ -103,7 +101,7 @@ def removeGarbage(transactions):
 
 def findDuplicates(items):
     '''
-    Finds duplicates in any arbitrary list
+    Finds duplicates in any arbitrary list.
 
     Params:
         items - list of items
@@ -124,7 +122,7 @@ def findDuplicates(items):
 
 def printDict(dict):
     '''
-    Prints input dictionary to console
+    Prints input dictionary to console.
 
     Params:
         dict - dictionary to print
@@ -132,32 +130,40 @@ def printDict(dict):
     for key, value in dict.iteritems():
         print key + ': ' + value
 
+def GETcheck404(url, err):
+    '''
+    Checks for a 404 response in a GET response, returns the response if it
+    doesn't have one.
+
+    Params:
+        url - the url which is requested
+        err - the error thrown on exit
+
+    Returns:
+        A valid response
+    '''
+    res = requests.get(url)
+    if res.status_code == 404:
+        sys.exit(err)
+
+    return res
+
 ################################################################################
 # Main Logic
 ################################################################################
-'''
-Download and organize data.
-
-Alternatively, we could have used a while loop across the pages until we 
-stumbled across a 404 (but then we would make assumptions that empty pages
-returned 404s, and we have total number of transactions available to us anyway).
-'''
-# Get the first page and figure out how many pages there are
-r = requests.get(GET_transpage_stub.format(1))
-if r.status_code != 200:
-    sys.exit('There are no transactions!')
-r = r.json()
-total_count = r['totalCount']
-total_pages = int(math.ceil(total_count / MAX_NUM_TRANS))
-
-# Add transactions to variable
-transactions = r['transactions']
+# Download and organize data
+page = 1
+res = GETcheck404(GET_transpage_stub.format(page),
+                  'There are no transactions!').json()
+total_count = res['totalCount']
+transactions = res['transactions']
 
 # Page through API and get the rest of the transactions
-if total_pages > 1:
-    for page in range(2, total_pages + 1):
-        r = requests.get(GET_transpage_stub.format(page)).json()
-        transactions.extend(r['transactions'])
+while len(transactions) != total_count:
+    page += 1
+    res = GETcheck404(GET_transpage_stub.format(page),
+                      'There is an invalid page lurking between pages.').json()
+    transactions.extend(res['transactions'])
 
 # Return information based on flags (or lack thereof)
 if args.categories: # Return list of expenses categorized
@@ -171,7 +177,7 @@ elif args.duplicate: # Return duplicate transactions
        printDict(trans)
 elif args.list: # Returns list of transaction details
     removeGarbage(transactions)
-    for trans in transactions:
+    for trans in sorted(transactions, key=lambda t: t['Date'], reverse=True):
         printDict(trans)
 else: # Return the total transactions Amount
     print 'Total Transaction Amount: ' + str(sumTransAmounts(transactions))
