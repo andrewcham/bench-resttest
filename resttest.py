@@ -1,6 +1,7 @@
 import argparse
 import collections
 import math
+import re
 import requests
 import sys
 
@@ -15,6 +16,10 @@ group.add_argument('-d', '--daily',
                     action='store_true')
 group.add_argument('-dup', '--duplicate',
                     help='alternatively print all duplicate transactions',
+                    action='store_true')
+group.add_argument('-l', '--list',
+                    help='alternatively print out all transaction details ' +
+                         '(with garbage removed)',
                     action='store_true')
 args = parser.parse_args()
 
@@ -85,6 +90,17 @@ def dailyBalances(transactions):
 
     return dates
 
+def removeGarbage(transactions):
+    '''
+    (Attempts to) Remove garbage text from transaction vendor names
+
+    Params:
+        transactions - list of transactions 
+    '''
+    garbage = re.compile(r'\w*[#@\d]\w*|\b(USD)\b|')
+    for trans in transactions:
+        trans['Company'] = garbage.sub('', trans['Company'])
+
 def findDuplicates(items):
     '''
     Finds duplicates in any arbitrary list
@@ -153,5 +169,9 @@ elif args.daily: # Return daily total transactions
 elif args.duplicate: # Return duplicate transactions
     for trans in findDuplicates(transactions):
        printDict(trans)
+elif args.list: # Returns list of transaction details
+    removeGarbage(transactions)
+    for trans in transactions:
+        printDict(trans)
 else: # Return the total transactions Amount
     print 'Total Transaction Amount: ' + str(sumTransAmounts(transactions))
