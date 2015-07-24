@@ -29,7 +29,7 @@ GET_transpage_stub = url + 'transactions/{0}.json'
 ################################################################################
 # Helper Functions
 ################################################################################
-def sumTransAmounts(transactions):
+def sum_trans_amount(transactions):
     '''
     Returns the total amount from list of transactions.
 
@@ -41,7 +41,7 @@ def sumTransAmounts(transactions):
     '''
     return sum([float(t['Amount']) for t in transactions])
 
-def expenseCategories(transactions):
+def expense_categories(transactions):
     '''
     Calculates total expenses in categories.
 
@@ -66,7 +66,7 @@ def expenseCategories(transactions):
 
     return categories
 
-def dailyBalances(transactions):
+def daily_balances(transactions):
     '''
     Calculates accumulative daily balances.
 
@@ -88,7 +88,7 @@ def dailyBalances(transactions):
 
     return dates
 
-def removeGarbage(transactions):
+def remove_garbage(transactions):
     '''
     (Attempts to) Remove garbage text from transaction vendor names.
 
@@ -99,7 +99,7 @@ def removeGarbage(transactions):
     for trans in transactions:
         trans['Company'] = garbage.sub('', trans['Company'])
 
-def findDuplicates(items):
+def find_duplicates(items):
     '''
     Finds duplicates in any arbitrary list.
 
@@ -120,7 +120,7 @@ def findDuplicates(items):
 
     return dups
 
-def printDict(dict):
+def print_dict(dict):
     '''
     Prints input dictionary to console.
 
@@ -130,7 +130,7 @@ def printDict(dict):
     for key, value in dict.iteritems():
         print key + ': ' + value
 
-def GETcheck404(url, err):
+def GET_check_404(url, err):
     '''
     Checks for a 404 response in a GET response, returns the response if it
     doesn't have one.
@@ -153,7 +153,7 @@ def GETcheck404(url, err):
 ################################################################################
 # Download and organize data
 page = 1
-res = GETcheck404(GET_transpage_stub.format(page),
+res = GET_check_404(GET_transpage_stub.format(page),
                   'There are no transactions!').json()
 total_count = res['totalCount']
 transactions = res['transactions']
@@ -161,23 +161,23 @@ transactions = res['transactions']
 # Page through API and get the rest of the transactions
 while len(transactions) != total_count:
     page += 1
-    res = GETcheck404(GET_transpage_stub.format(page),
+    res = GET_check_404(GET_transpage_stub.format(page),
                       'There is an invalid page lurking between pages.').json()
     transactions.extend(res['transactions'])
 
 # Return information based on flags (or lack thereof)
 if args.categories: # Return list of expenses categorized
-    for cat, total in expenseCategories(transactions).iteritems():
+    for cat, total in expense_categories(transactions).iteritems():
         print cat + ': ' + str(total)
 elif args.daily: # Return daily total transactions
-    for date, total in dailyBalances(transactions).iteritems():
+    for date, total in daily_balances(transactions).iteritems():
         print date + ': ' + str(total)
 elif args.duplicate: # Return duplicate transactions
-    for trans in findDuplicates(transactions):
-       printDict(trans)
+    for trans in find_duplicates(transactions):
+       print_dict(trans)
 elif args.list: # Returns list of transaction details
-    removeGarbage(transactions)
+    remove_garbage(transactions)
     for trans in sorted(transactions, key=lambda t: t['Date'], reverse=True):
-        printDict(trans)
+        print_dict(trans)
 else: # Return the total transactions Amount
-    print 'Total Transaction Amount: ' + str(sumTransAmounts(transactions))
+    print 'Total Transaction Amount: ' + str(sum_trans_amount(transactions))
