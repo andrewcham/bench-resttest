@@ -9,7 +9,7 @@ Running Python 2.7.x
 Prints the transaction total.
 
 Optional arguments:
-````
+````python
   -h, --help         show this help message and exit
   -c, --categories   alternatively print totals in expense categories
   -d, --daily        alternatively print daily accumulated balances
